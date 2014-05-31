@@ -7,6 +7,8 @@ import org.skyscreamer.nevado.jms.util.RandomData;
 
 import javax.jms.JMSException;
 import java.util.LinkedList;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Mock implementation of an SQSQueue.  Intended for testing and development.
@@ -15,11 +17,11 @@ import java.util.LinkedList;
  */
 public class MockSQSQueue implements SQSQueue, ResettableMock {
     private static final long DEFAULT_MESSAGE_VISIBILITY = 120000;
-    private final LinkedList<MockSQSMessage> _messageList = new LinkedList<MockSQSMessage>();
     private final String _queueARN = RandomData.readString();
     private final NevadoQueue _queue;
     private final MockSQSConnector _connector;
-    private boolean _isDeleted = false;
+    private final LinkedList<MockSQSMessage> _messageList = new LinkedList<MockSQSMessage>();
+    private volatile boolean _isDeleted = false;
 
     public MockSQSQueue(MockSQSConnector connector, NevadoQueue queue) {
         _queue = queue;
@@ -90,7 +92,7 @@ public class MockSQSQueue implements SQSQueue, ResettableMock {
     }
 
     @Override
-    public synchronized SQSMessage receiveMessage(long maxWaitTimeMs, long shortPollIntervalMs) throws JMSException {
+    public SQSMessage receiveMessage(long maxWaitTimeMs, long shortPollIntervalMs) throws JMSException {
         checkIsDeleted();
         SQSMessage nextMessage = null;
         long startTime = System.currentTimeMillis();
@@ -119,7 +121,8 @@ public class MockSQSQueue implements SQSQueue, ResettableMock {
         return nextMessage;
     }
 
-    private SQSMessage pollSqsMessage() {
+    private synchronized SQSMessage pollSqsMessage() throws JMSException {
+        checkIsDeleted();
         SQSMessage nextMessage = null;
         for(MockSQSMessage message : _messageList)
         {
