@@ -18,7 +18,7 @@ public interface SQSQueue {
 
     void deleteMessage(String sqsReceiptHandle) throws JMSException;
 
-    SQSMessage receiveMessage() throws JMSException;
+    SQSMessage receiveMessage(long maxWaitTimeMs, long shortPollIntervalMs) throws JMSException;
 
     void deleteQueue() throws JMSException;
 }

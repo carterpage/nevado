@@ -27,10 +27,10 @@ public class MockSQSQueueTest {
     @Test
     public void testQueueWorksAsExpectedForNonResetQueue() throws Exception {
         _mockSQSQueue.sendMessage(MESSAGE_BODY);
-        SQSMessage sqsMessage = _mockSQSQueue.receiveMessage();
+        SQSMessage sqsMessage = _mockSQSQueue.receiveMessage(0, 0);
         Assert.assertNotNull("Message was not returned from internal list", sqsMessage);
         Assert.assertEquals("Message bodies were not equal", MESSAGE_BODY, sqsMessage.getMessageBody());
-        sqsMessage = _mockSQSQueue.receiveMessage();
+        sqsMessage = _mockSQSQueue.receiveMessage(0, 0);
         Assert.assertNull("Message was returned but internal list should have been empty", sqsMessage);
     }
 
@@ -38,7 +38,7 @@ public class MockSQSQueueTest {
     public void testQueueCanBeReset() throws Exception {
         _mockSQSQueue.sendMessage(MESSAGE_BODY);
         _mockSQSQueue.reset();
-        SQSMessage sqsMessage = _mockSQSQueue.receiveMessage();
+        SQSMessage sqsMessage = _mockSQSQueue.receiveMessage(0, 0);
         Assert.assertNull("Message was returned but internal list should have been empty", sqsMessage);
     }
 

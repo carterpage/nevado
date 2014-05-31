@@ -104,9 +104,8 @@ public abstract class AbstractSQSConnector implements SQSConnector {
     }
 
     public NevadoMessage receiveMessage(NevadoConnection connection, NevadoDestination destination, long timeoutMs) throws JMSException, InterruptedException {
-        long startTimeMs = new Date().getTime();
         SQSQueue sqsQueue = getSQSQueue(destination);
-        SQSMessage sqsMessage = receiveSQSMessage(connection, destination, timeoutMs, startTimeMs, sqsQueue);
+        SQSMessage sqsMessage = receiveSQSMessage(connection, destination, timeoutMs, sqsQueue);
         if (sqsMessage != null) {
             _log.info("Received message " + sqsMessage.getMessageId());
         }
@@ -170,34 +169,24 @@ public abstract class AbstractSQSConnector implements SQSConnector {
 
 
     protected SQSMessage receiveSQSMessage(NevadoConnection connection, NevadoDestination destination, long timeoutMs,
-                                           long startTimeMs, SQSQueue sqsQueue)
+                                           SQSQueue sqsQueue)
             throws JMSException, InterruptedException {
         SQSMessage sqsMessage;
-        while(true) {
-            if (connection.isRunning()) {
-                sqsMessage = sqsQueue.receiveMessage();
-                if (sqsMessage != null && !connection.isRunning()) {
-                    // Connection was stopped while the REST call to SQS was being made
-                    try {
-                        sqsQueue.setMessageVisibilityTimeout(sqsMessage.getReceiptHandle(), 0); // Make it immediately available to the next requestor
-                    } catch (JMSException e) {
-                        String exMessage = "Unable to reset visibility timeout for message: " + e.getMessage();
-                        _log.warn(exMessage, e); // Non-fatal.  Just means the message will disappear until the visibility timeout expires.
-                    }
-                    sqsMessage = null;
+        if (connection.isRunning()) {
+            sqsMessage = sqsQueue.receiveMessage(timeoutMs, _receiveCheckIntervalMs);
+            if (sqsMessage != null && !connection.isRunning()) {
+                // Connection was stopped while the REST call to SQS was being made
+                try {
+                    sqsQueue.setMessageVisibilityTimeout(sqsMessage.getReceiptHandle(), 0); // Make it immediately available to the next requestor
+                } catch (JMSException e) {
+                    String exMessage = "Unable to reset visibility timeout for message: " + e.getMessage();
+                    _log.warn(exMessage, e); // Non-fatal.  Just means the message will disappear until the visibility timeout expires.
                 }
-            }
-            else {
-                _log.debug("Not accepting messages.  Connection is paused or not started.");
                 sqsMessage = null;
             }
-
-            // Check for message or timeout
-            if (sqsMessage != null || (timeoutMs > -1 && (new Date().getTime() - startTimeMs) >= timeoutMs)) {
-                break;
-            }
-
-            Thread.sleep(_receiveCheckIntervalMs);
+        } else {
+            _log.debug("Not accepting messages.  Connection is paused or not started.");
+            sqsMessage = null;
         }
         if (_log.isDebugEnabled())
         {

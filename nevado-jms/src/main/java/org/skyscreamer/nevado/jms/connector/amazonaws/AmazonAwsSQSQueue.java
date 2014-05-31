@@ -94,11 +94,54 @@ public class AmazonAwsSQSQueue implements SQSQueue {
     }
 
     @Override
-    public AmazonAwsSQSMessage receiveMessage() throws JMSException {
+    public AmazonAwsSQSMessage receiveMessage(long maxWaitTimeMs, long shortPollIntervalMs) throws JMSException {
+        AmazonAwsSQSMessage sqsMessage;
+        long startTime = System.currentTimeMillis();
+        long timeRemaining = maxWaitTimeMs;
+        while(true) {
+            // Wait a whole number of seconds for the time remaining
+            int waitSeconds = (int)(timeRemaining / 1000);
+            if (waitSeconds < 0) {
+                waitSeconds = 0;
+            } else if (waitSeconds > 20) {
+                waitSeconds = 20;
+            }
+            sqsMessage = longPollMessage(waitSeconds);
+
+            // If we got a message, we're done
+            if (sqsMessage != null) {
+                break;
+            }
+
+            long oldTimeRemaining = timeRemaining;
+            timeRemaining = maxWaitTimeMs - (System.currentTimeMillis() - startTime);
+            long sleepForMs;
+            if (timeRemaining <= 0) {
+                // Out of time
+                break;
+            } else if (timeRemaining < shortPollIntervalMs) {
+                // Less than the short-polling interval is left.  Sleep that long, then check again.
+                sleepForMs = timeRemaining;
+            } else {
+                // More than the short poll internal is remaining.  Wait that long, then continue.
+                sleepForMs = shortPollIntervalMs;
+            }
+            try {
+                Thread.sleep(sleepForMs);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            timeRemaining = maxWaitTimeMs - (System.currentTimeMillis() - startTime);
+        }
+        return sqsMessage;
+    }
+
+    private AmazonAwsSQSMessage longPollMessage(Integer waitSeconds) throws JMSException {
         AmazonAwsSQSMessage sqsMessage;
         try {
             ReceiveMessageRequest request = new ReceiveMessageRequest(_queueUrl)
-                    .withAttributeNames(AmazonAwsSQSConnector.MESSAGE_ATTRIBUTE_APPROXIMATE_RECEIVE_COUNT);
+                    .withAttributeNames(AmazonAwsSQSConnector.MESSAGE_ATTRIBUTE_APPROXIMATE_RECEIVE_COUNT)
+                    .withWaitTimeSeconds(waitSeconds);
             ReceiveMessageResult result = _amazonAwsSQSConnector.getAmazonSQS().receiveMessage(request);
             List<Message> messages = result.getMessages();
             sqsMessage = (messages != null && messages.size() > 0) ? new AmazonAwsSQSMessage(messages.get(0)) : null;

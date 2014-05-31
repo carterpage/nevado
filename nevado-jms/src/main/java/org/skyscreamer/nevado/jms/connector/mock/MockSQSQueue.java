@@ -90,8 +90,36 @@ public class MockSQSQueue implements SQSQueue, ResettableMock {
     }
 
     @Override
-    public synchronized SQSMessage receiveMessage() throws JMSException {
+    public synchronized SQSMessage receiveMessage(long maxWaitTimeMs, long shortPollIntervalMs) throws JMSException {
         checkIsDeleted();
+        SQSMessage nextMessage = null;
+        long startTime = System.currentTimeMillis();
+        while(true) {
+            long timeRemaining = maxWaitTimeMs - (System.currentTimeMillis() - startTime);
+            nextMessage = pollSqsMessage();
+            if (nextMessage != null) {
+                break;
+            }
+
+            timeRemaining = maxWaitTimeMs - (System.currentTimeMillis() - startTime);
+            if (timeRemaining <= 0) {
+                // Out of time
+                break;
+            }
+
+            long sleepForMs = 0;
+            sleepForMs = timeRemaining < shortPollIntervalMs ? timeRemaining : shortPollIntervalMs;
+            try {
+                Thread.sleep(sleepForMs);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        return nextMessage;
+    }
+
+    private SQSMessage pollSqsMessage() {
         SQSMessage nextMessage = null;
         for(MockSQSMessage message : _messageList)
         {
