@@ -71,7 +71,7 @@ public class NevadoMessageConsumer implements MessageConsumer, QueueReceiver, To
 
     @Override
     public NevadoMessage receive() throws JMSException {
-        return receive(-1);
+        return receive(0);
     }
 
     @Override
@@ -92,7 +92,7 @@ public class NevadoMessageConsumer implements MessageConsumer, QueueReceiver, To
 
     @Override
     public NevadoMessage receiveNoWait() throws JMSException {
-        return receive(0);
+        return receive(1);
     }
 
     public synchronized void close() throws JMSException {
@@ -130,7 +130,7 @@ public class NevadoMessageConsumer implements MessageConsumer, QueueReceiver, To
         NevadoMessage message;
         if ((message = _messageParking.getAndSet(null)) == null)
         {
-            message = _session.receiveMessage(_destination, 0, _noLocal);
+            message = _session.receiveMessage(_destination, 1, _noLocal);
         }
         if (message != null) {
             try {

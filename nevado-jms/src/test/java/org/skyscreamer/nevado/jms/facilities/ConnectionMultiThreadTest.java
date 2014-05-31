@@ -72,6 +72,9 @@ public class ConnectionMultiThreadTest extends AbstractJMSTest {
                     _log.debug("[" + _id + "] connection.start() took " + _stopWatch.getTime() + " ms");
                     Thread.sleep(_random.nextInt(10));
                 }
+                catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
                 catch (Exception e) {
                     _exception = e;
                     break;

@@ -427,10 +427,10 @@ public class NevadoSession implements Session {
 
         while(firstPass
                 || (message == null
-                    && (timeoutMs < 0 || (elapsed = System.currentTimeMillis() - startTime) < timeoutMs)))
+                    && (timeoutMs <= 0 || (elapsed = System.currentTimeMillis() - startTime) < timeoutMs)))
         {
             firstPass = false;
-            long adjustedTimeout = timeoutMs < 0 ? timeoutMs : (timeoutMs - elapsed);
+            long adjustedTimeout = timeoutMs <= 0 ? 20 * 1000 : (timeoutMs - elapsed);
             message = getUnfilteredMessage(destination, adjustedTimeout);
 
             // Filter expired messages

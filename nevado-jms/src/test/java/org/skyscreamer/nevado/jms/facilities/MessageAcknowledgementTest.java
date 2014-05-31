@@ -30,7 +30,7 @@ public class MessageAcknowledgementTest extends AbstractJMSTest {
         Assert.assertTrue(msgOut.isAcknowledged());
     }
 
-    @Test
+    @Test(timeout = 5000)
     public void testAsyncAutoAcknowledge() throws JMSException, InterruptedException {
         NevadoConnection connection = getConnection();
         NevadoSession session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
@@ -44,7 +44,6 @@ public class MessageAcknowledgementTest extends AbstractJMSTest {
         Assert.assertTrue("Message should be acknowledged after it returns from the listener",
                 message.isAcknowledged());
         Assert.assertTrue(messageListener.isEmpty());
-        session.close();
     }
 
     @Test
