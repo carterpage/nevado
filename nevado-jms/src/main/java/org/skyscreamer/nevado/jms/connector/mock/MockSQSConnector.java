@@ -1,6 +1,7 @@
 package org.skyscreamer.nevado.jms.connector.mock;
 
 import org.skyscreamer.nevado.jms.connector.AbstractSQSConnector;
+import org.skyscreamer.nevado.jms.connector.NevadoConfiguration;
 import org.skyscreamer.nevado.jms.connector.SQSMessage;
 import org.skyscreamer.nevado.jms.destination.NevadoDestination;
 import org.skyscreamer.nevado.jms.destination.NevadoQueue;
@@ -23,11 +24,7 @@ public class MockSQSConnector extends AbstractSQSConnector implements Resettable
     private final Map<NevadoTopic, Collection<MockSQSQueue>> _mockTopicMap = new HashMap<NevadoTopic, Collection<MockSQSQueue>>();
 
     public MockSQSConnector() {
-        this(200);
-    }
-
-    public MockSQSConnector(long receiveCheckIntervalMs) {
-        super(receiveCheckIntervalMs);
+        super(new NevadoConfiguration());
     }
 
     @Override

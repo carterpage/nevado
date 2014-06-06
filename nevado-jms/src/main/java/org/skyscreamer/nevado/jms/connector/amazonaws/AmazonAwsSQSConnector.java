@@ -18,7 +18,9 @@ import com.amazonaws.services.sqs.model.CreateQueueRequest;
 import com.amazonaws.services.sqs.model.CreateQueueResult;
 import com.amazonaws.services.sqs.model.ListQueuesRequest;
 import com.amazonaws.services.sqs.model.ListQueuesResult;
+import org.apache.commons.lang.StringUtils;
 import org.skyscreamer.nevado.jms.connector.AbstractSQSConnector;
+import org.skyscreamer.nevado.jms.connector.NevadoConfiguration;
 import org.skyscreamer.nevado.jms.connector.SQSMessage;
 import org.skyscreamer.nevado.jms.connector.SQSQueue;
 import org.skyscreamer.nevado.jms.destination.NevadoDestination;
@@ -50,31 +52,57 @@ public class AmazonAwsSQSConnector extends AbstractSQSConnector {
     private final AmazonSQS _amazonSQS;
     private final AmazonSNS _amazonSNS;
 
-    public AmazonAwsSQSConnector(String awsAccessKey, String awsSecretKey, boolean isSecure, long receiveCheckIntervalMs) {
-        this(awsAccessKey, awsSecretKey, isSecure, receiveCheckIntervalMs, false);
+    public static AmazonAwsSQSConnector getInstance(AmazonAwsConfiguration awsConfig) {
+        AmazonAwsSQSConnector connector = new AmazonAwsSQSConnector(awsConfig);
+        return connector;
     }
 
-    public AmazonAwsSQSConnector(String awsAccessKey, String awsSecretKey, boolean isSecure, long receiveCheckIntervalMs, boolean isAsync) {
-        super(receiveCheckIntervalMs, isAsync);
-        AWSCredentials awsCredentials = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
-        ClientConfiguration clientConfiguration = new ClientConfiguration();
+    protected AmazonAwsSQSConnector(NevadoConfiguration config) {
+        super(config);
+        AmazonAwsConfiguration awsConfig = AmazonAwsConfiguration.wrap(config);
+        AWSCredentials credentials =
+            new BasicAWSCredentials(awsConfig.getAccessKey(), awsConfig.getSecretKey());
+        ClientConfiguration clientConfig = new ClientConfiguration();
         String proxyHost = System.getProperty("http.proxyHost");
         String proxyPort = System.getProperty("http.proxyPort");
         if(proxyHost != null){
-            clientConfiguration.setProxyHost(proxyHost);
+            clientConfig.setProxyHost(proxyHost);
             if(proxyPort != null){
-              clientConfiguration.setProxyPort(Integer.parseInt(proxyPort));
+                clientConfig.setProxyPort(Integer.parseInt(proxyPort));
             }
-        }  
-        clientConfiguration.setProtocol(isSecure ? Protocol.HTTPS : Protocol.HTTP);
-        if (isAsync) {
-            ExecutorService executorService = Executors.newSingleThreadExecutor();
-            _amazonSQS = new AmazonSQSAsyncClient(awsCredentials, clientConfiguration, executorService);
-            _amazonSNS = new AmazonSNSAsyncClient(awsCredentials, clientConfiguration, executorService);
-        } else {
-            _amazonSQS = new AmazonSQSClient(awsCredentials, clientConfiguration);
-            _amazonSNS = new AmazonSNSClient(awsCredentials, clientConfiguration);
         }
+        clientConfig.setProtocol(awsConfig.isSecure() ? Protocol.HTTPS : Protocol.HTTP);
+        if (awsConfig.isUseAsyncSend()) {
+            ExecutorService executorService = Executors.newSingleThreadExecutor();
+            _amazonSQS = new AmazonSQSAsyncClient(credentials, clientConfig, executorService);
+            _amazonSNS = new AmazonSNSAsyncClient(credentials, clientConfig, executorService);
+        } else {
+            _amazonSQS = new AmazonSQSClient(credentials, clientConfig);
+            _amazonSNS = new AmazonSNSClient(credentials, clientConfig);
+        }
+
+        if (StringUtils.isNotEmpty(awsConfig.getSQSEndpoint())) {
+            _amazonSQS.setEndpoint(awsConfig.getSQSEndpoint());
+        }
+        if (StringUtils.isNotEmpty(awsConfig.getSNSEndpoint())) {
+            _amazonSNS.setEndpoint(awsConfig.getSNSEndpoint());
+        }
+    }
+
+    @Deprecated
+    public AmazonAwsSQSConnector(String awsAccessKey, String awsSecretKey, boolean isSecure,
+                                 long receiveCheckIntervalMs) {
+        this(awsAccessKey, awsSecretKey, isSecure, receiveCheckIntervalMs, false);
+    }
+
+    @Deprecated
+    public AmazonAwsSQSConnector(String awsAccessKey, String awsSecretKey, boolean isSecure,
+                                 long receiveCheckIntervalMs, boolean isAsync) {
+        this(new AmazonAwsConfiguration().withAccessKey(awsAccessKey)
+            .withSecretKey(awsSecretKey)
+            .withSecure(isSecure)
+            .withReceiveCheckIntervalMs(receiveCheckIntervalMs)
+            .withUseAsyncSend(isAsync));
     }
 
     @Override

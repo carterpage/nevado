@@ -13,29 +13,29 @@ import javax.jms.JMSException;
 public abstract class AbstractSQSConnectorFactory implements SQSConnectorFactory {
     protected final Log _log = LogFactory.getLog(getClass());
 
-    public static final int DEFAULT_RECEIVE_CHECK_INTERVAL_MS = 200;
+    @Deprecated
     protected boolean _isSecure = true;
-    protected long _receiveCheckIntervalMs = DEFAULT_RECEIVE_CHECK_INTERVAL_MS;
+    @Deprecated
+    protected long _receiveCheckIntervalMs = NevadoConfiguration.DEFAULT_RECEIVE_CHECK_INTERVAL_MS;
 
+    @Deprecated
     @Override
-    public abstract SQSConnector getInstance(String awsAccessKey, String awsSecretKey, String awsSQSEndpoint,
-                                             String awsSNSEndpoint) throws JMSException;
+    public abstract SQSConnector getInstance(String awsAccessKey, String awsSecretKey,
+        String awsSQSEndpoint, String awsSNSEndpoint) throws JMSException;
 
+    @Deprecated
     @Override
     public SQSConnector getInstance(String awsAccessKey, String awsSecretKey) throws JMSException {
         return getInstance(awsAccessKey, awsSecretKey, null, null);
     }
 
+    @Deprecated
     public void setSecure(boolean secure) {
         _isSecure = secure;
     }
 
+    @Deprecated
     public void setReceiveCheckIntervalMs(long receiveCheckIntervalMs) {
-        if (receiveCheckIntervalMs < DEFAULT_RECEIVE_CHECK_INTERVAL_MS) {
-            _log.warn("Reducing the receiveCheckInterval will increase your AWS costs.  " +
-                    "Amazon charges each time a check is made, even if no message is available: " +
-                    "http://aws.amazon.com/sqs/pricing/");
-        }
         _receiveCheckIntervalMs = receiveCheckIntervalMs;
     }
 }

@@ -32,22 +32,14 @@ public abstract class AbstractSQSConnector implements SQSConnector {
 
     protected final Log _log = LogFactory.getLog(getClass());
 
-    private final long _receiveCheckIntervalMs;
-    private final boolean _isAsync;
+    private final NevadoConfiguration _configuration;
 
-    protected AbstractSQSConnector(long receiveCheckIntervalMs)
-    {
-        this(receiveCheckIntervalMs, false);
-    }
-
-    protected AbstractSQSConnector(long receiveCheckIntervalMs, boolean isAsync)
-    {
-        _receiveCheckIntervalMs = receiveCheckIntervalMs;
-        _isAsync = isAsync;
+    public AbstractSQSConnector(NevadoConfiguration config) {
+        _configuration = config;
     }
 
     public boolean isAsync() {
-        return _isAsync;
+        return _configuration.isUseAsyncSend();
     }
 
     public void sendMessage(NevadoDestination destination, NevadoMessage message) throws JMSException
@@ -197,7 +189,7 @@ public abstract class AbstractSQSConnector implements SQSConnector {
                 break;
             }
 
-            Thread.sleep(_receiveCheckIntervalMs);
+            Thread.sleep(_configuration.getReceiveCheckIntervalMs());
         }
         if (_log.isDebugEnabled())
         {
